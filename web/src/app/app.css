@@ -1,0 +1,8 @@
+:host { display: block; max-width: 720px; margin: 0 auto; padding: 24px 16px 64px; }
+header h1 { margin: 0; font-size: 32px; letter-spacing: -0.5px; }
+.tag { margin: 4px 0 0; color: #333; }
+.mode { margin: 8px 0 0; font-size: 13px; color: #5b5b5b; }
+nav { display: flex; gap: 8px; margin: 20px 0; flex-wrap: wrap; }
+nav button { border: 1px solid #ddd; background: #fff; padding: 8px 14px; border-radius: 999px; cursor: pointer; font: inherit; }
+nav button.on { background: #111; color: #fff; border-color: #111; }
+.error { color: #b00020; }

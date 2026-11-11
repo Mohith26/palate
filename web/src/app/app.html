@@ -1,0 +1,59 @@
+<header>
+  <h1>Palate</h1>
+  <p class="tag">Rank restaurants by picking between two. Scores come from your ranks.</p>
+  @if (store.mode() === 'demo') {
+    <p class="mode">Demo mode: runs in your browser with real Manhattan restaurants and three simulated friends.</p>
+  }
+</header>
+<nav>
+  <button [class.on]="tab() === 'rank'" (click)="tab.set('rank')">Rank a place</button>
+  <button [class.on]="tab() === 'list'" (click)="tab.set('list')">My list ({{ store.count() }})</button>
+  <button [class.on]="tab() === 'friends'" (click)="tab.set('friends')">Friends' picks</button>
+  <button [class.on]="tab() === 'experiments'" (click)="tab.set('experiments')">Experiments</button>
+</nav>
+@if (store.error(); as e) {
+  <p class="error">{{ e }}</p>
+}
+<main>
+  @switch (tab()) {
+    @case ('rank') {
+      <app-rank-flow />
+    }
+    @case ('list') {
+      <ol class="list">
+        @for (e of store.entries(); track e.place.id) {
+          <li [class]="e.band">
+            <span class="score">{{ e.score | number: '1.1-1' }}</span>
+            <span class="name">{{ e.place.name }}</span>
+            <span class="cuisine">{{ e.place.cuisine }}</span>
+            <button class="link" (click)="store.remove(e.place.id)">remove</button>
+          </li>
+        } @empty {
+          <li class="empty">Nothing ranked yet. Start with a place you know well.</li>
+        }
+      </ol>
+    }
+    @case ('friends') {
+      <h2>Taste match</h2>
+      <ul class="taste">
+        @for (f of store.taste(); track f.handle) {
+          <li><b>{{ f.handle }}</b> similarity {{ f.similarity | number: '1.2-2' }} on {{ f.overlap }} shared places</li>
+        }
+      </ul>
+      <h2>Recommended for you</h2>
+      <ol class="list">
+        @for (r of store.recs(); track r.place.id) {
+          <li class="liked">
+            <span class="score">{{ r.predicted_score | number: '1.1-1' }}</span>
+            <span class="name">{{ r.place.name }}</span><span class="cuisine">{{ r.place.cuisine }}</span>
+          </li>
+        } @empty {
+          <li class="empty">Rank a few places your friends have been to and recommendations show up here.</li>
+        }
+      </ol>
+    }
+    @case ('experiments') {
+      <app-experiment-view />
+    }
+  }
+</main>

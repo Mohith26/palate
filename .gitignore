@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+server/palate.sqlite3
+web/node_modules/
+web/dist/
+web/.angular/
+.DS_Store
+EXPLAINER.md
+bank-entry.json
