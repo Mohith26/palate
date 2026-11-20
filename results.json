@@ -1,0 +1,228 @@
+{
+  "generated_at": "2026-11-10 22:03:17",
+  "seed": 20271,
+  "machine": "Darwin arm64, Python 3.13.13",
+  "data_note": "Users, answers and experiment metrics are simulated. Restaurant catalog is real NYC DOHMH inspection data (Manhattan, inspected 2024 or later).",
+  "insertion": {
+    "setup": "200 simulated users per cell; utilities N(0,1); Thurstone choice noise sigma; 100-place lists for the noise table, 200-place lists for the size curve",
+    "size_curve": [
+      {
+        "list_size": 10,
+        "binary_mean_comparisons": 3.55,
+        "binary_max_comparisons": 4,
+        "log2_n_plus_1": 3.459,
+        "ceil_log2_n_plus_1": 4,
+        "linear_scan_mean_comparisons": 5.81
+      },
+      {
+        "list_size": 25,
+        "binary_mean_comparisons": 4.745,
+        "binary_max_comparisons": 5,
+        "log2_n_plus_1": 4.7,
+        "ceil_log2_n_plus_1": 5,
+        "linear_scan_mean_comparisons": 13.815
+      },
+      {
+        "list_size": 50,
+        "binary_mean_comparisons": 5.71,
+        "binary_max_comparisons": 6,
+        "log2_n_plus_1": 5.672,
+        "ceil_log2_n_plus_1": 6,
+        "linear_scan_mean_comparisons": 26.325
+      },
+      {
+        "list_size": 100,
+        "binary_mean_comparisons": 6.74,
+        "binary_max_comparisons": 7,
+        "log2_n_plus_1": 6.658,
+        "ceil_log2_n_plus_1": 7,
+        "linear_scan_mean_comparisons": 51.395
+      },
+      {
+        "list_size": 199,
+        "binary_mean_comparisons": 7.71,
+        "binary_max_comparisons": 8,
+        "log2_n_plus_1": 7.644,
+        "ceil_log2_n_plus_1": 8,
+        "linear_scan_mean_comparisons": 98.52
+      }
+    ],
+    "worst_case_within_ceil_log2_all_sizes_1_to_199": true,
+    "total_comparisons_to_build_100_list": {
+      "binary": 530.5,
+      "linear_scan": 2572.6,
+      "reduction_x": 4.85
+    },
+    "noise_table": [
+      {
+        "sigma": 0.0,
+        "linear": {
+          "kendall_tau": 1.0,
+          "comparisons_per_insert": 25.814
+        },
+        "binary": {
+          "kendall_tau": 1.0,
+          "comparisons_per_insert": 5.307
+        },
+        "band_binary": {
+          "kendall_tau": 1.0,
+          "comparisons_per_insert": 3.828
+        },
+        "band_binary_tie": {
+          "kendall_tau": 0.9515,
+          "comparisons_per_insert": 2.474
+        }
+      },
+      {
+        "sigma": 0.1,
+        "linear": {
+          "kendall_tau": 0.9389,
+          "comparisons_per_insert": 24.466
+        },
+        "binary": {
+          "kendall_tau": 0.9546,
+          "comparisons_per_insert": 5.271
+        },
+        "band_binary": {
+          "kendall_tau": 0.9553,
+          "comparisons_per_insert": 3.792
+        },
+        "band_binary_tie": {
+          "kendall_tau": 0.9357,
+          "comparisons_per_insert": 2.652
+        }
+      },
+      {
+        "sigma": 0.25,
+        "linear": {
+          "kendall_tau": 0.7543,
+          "comparisons_per_insert": 19.981
+        },
+        "binary": {
+          "kendall_tau": 0.8853,
+          "comparisons_per_insert": 5.253
+        },
+        "band_binary": {
+          "kendall_tau": 0.8883,
+          "comparisons_per_insert": 3.77
+        },
+        "band_binary_tie": {
+          "kendall_tau": 0.8807,
+          "comparisons_per_insert": 2.966
+        }
+      },
+      {
+        "sigma": 0.5,
+        "linear": {
+          "kendall_tau": 0.4343,
+          "comparisons_per_insert": 12.212
+        },
+        "binary": {
+          "kendall_tau": 0.7775,
+          "comparisons_per_insert": 5.237
+        },
+        "band_binary": {
+          "kendall_tau": 0.7795,
+          "comparisons_per_insert": 3.757
+        },
+        "band_binary_tie": {
+          "kendall_tau": 0.7802,
+          "comparisons_per_insert": 3.226
+        }
+      }
+    ]
+  },
+  "experiments": {
+    "setup": "2000 simulated experiments per scenario, 10000 users per arm, 20 evenly spaced looks, alpha=0.05; metric = places ranked in 2 weeks (Gamma-Poisson), pre-period = prior 2 weeks; tau = 0.1 x pooled SD at the first look; CUPED theta re-estimated at every look from data seen so far",
+    "aa_raw": {
+      "naive_peeking_reject_rate": 0.252,
+      "fixed_horizon_reject_rate": 0.05,
+      "msprt_reject_rate": 0.02,
+      "msprt_mean_users_at_stop": 19728.0
+    },
+    "aa_cuped": {
+      "naive_peeking_reject_rate": 0.2625,
+      "fixed_horizon_reject_rate": 0.057,
+      "msprt_reject_rate": 0.018,
+      "msprt_mean_users_at_stop": 19758.0,
+      "cuped_variance_reduction_mean": 0.44451119350012447
+    },
+    "ab_raw": {
+      "naive_peeking_reject_rate": 0.9645,
+      "fixed_horizon_reject_rate": 0.9315,
+      "msprt_reject_rate": 0.6985,
+      "msprt_mean_users_at_stop": 13619.5
+    },
+    "ab_cuped": {
+      "naive_peeking_reject_rate": 0.9975,
+      "fixed_horizon_reject_rate": 0.995,
+      "msprt_reject_rate": 0.958,
+      "msprt_mean_users_at_stop": 9226.0,
+      "cuped_variance_reduction_mean": 0.44795262743522307
+    },
+    "ab_true_relative_lift": 0.05,
+    "mc_se_at_5pct": 0.004873397172404482,
+    "peeking_fpr_inflation_x": 5.04,
+    "cuped_users_to_decision_reduction": 0.32258893498292884,
+    "cuped_variance_reduction_theory": 0.4444444444444444,
+    "seconds": 24.7
+  },
+  "recommendations": {
+    "setup": "300 simulated diners in 6 taste clusters over 1500 real Manhattan restaurants (65 cuisines); 60 visits each (Zipf popularity); lists built with band-first insertion at sigma=0.25; 20 friends each, 50% same-cluster in expectation; relevant = top 10% true utility among places not on the list",
+    "popularity": {
+      "precision_at_10": 0.4813,
+      "mean_true_percentile": 0.8399
+    },
+    "friends_unweighted": {
+      "precision_at_10": 0.525,
+      "mean_true_percentile": 0.8357
+    },
+    "friends_taste_weighted": {
+      "precision_at_10": 0.5547,
+      "mean_true_percentile": 0.875
+    },
+    "mean_similarity_same_cluster_friends": 0.3522,
+    "mean_similarity_other_cluster_friends": 0.0554,
+    "random_precision_at_10": 0.1
+  },
+  "api_latency": {
+    "setup": "gunicorn 4 sync workers + PostgreSQL 16 on one laptop; 16 concurrent client threads; 48 simulated diners each ranking 60 places (band-first, sigma=0.25) then reading their list 5 times",
+    "requests": 12144,
+    "errors": 0,
+    "error_samples": [],
+    "wall_seconds": 9.01,
+    "throughput_rps": 1347.7,
+    "all_requests": {
+      "p50_ms": 10.73,
+      "p95_ms": 17.08,
+      "p99_ms": 31.44
+    },
+    "by_endpoint": {
+      "GET /list": {
+        "n": 240,
+        "p50_ms": 8.5,
+        "p95_ms": 13.94,
+        "p99_ms": 15.35
+      },
+      "POST /answer": {
+        "n": 8976,
+        "p50_ms": 10.84,
+        "p95_ms": 16.89,
+        "p99_ms": 21.86
+      },
+      "POST /diners": {
+        "n": 48,
+        "p50_ms": 8.71,
+        "p95_ms": 256.6,
+        "p99_ms": 385.69
+      },
+      "POST /inserts": {
+        "n": 2880,
+        "p50_ms": 10.44,
+        "p95_ms": 18.09,
+        "p99_ms": 42.92
+      }
+    },
+    "mean_comparisons_per_insert_over_http": 3.117
+  }
+}
