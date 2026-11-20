@@ -48,3 +48,37 @@ describe('demo experiment simulator', () => {
     expect(r.varianceReduction!).toBeGreaterThan(0.3);
   });
 });
+
+describe('demo polish', () => {
+  it('tidies DOHMH title-casing in names', async () => {
+    const { tidyName } = await import('./meta');
+    expect(tidyName("Mama'S Pizza")).toBe("Mama's Pizza");
+    expect(tidyName("O'Donoghue'S")).toBe("O'Donoghue's");
+    expect(tidyName('7Th Street Burger')).toBe('7th Street Burger');
+    expect(tidyName('Holiday Inn Express Nyc')).toBe('Holiday Inn Express NYC');
+  });
+
+  it('round-trips lists through export/import and drops unknown ids', () => {
+    const b = new LocalBackend(places);
+    for (const id of [5, 6, 7]) {
+      let s = b.startInsert(id, 'fine');
+      while (s.status === 'open') s = b.answer(s.id, 'existing');
+    }
+    const saved = b.exportLists();
+    const b2 = new LocalBackend(places);
+    b2.importLists({ ...saved, liked: [9999] });
+    expect(b2.list()).toEqual(b.list());
+  });
+
+  it('exposes the live search window on open sessions', () => {
+    const b = new LocalBackend(places);
+    for (let id = 1; id <= 7; id++) {
+      let s = b.startInsert(id, 'liked');
+      while (s.status === 'open') s = b.answer(s.id, 'existing');
+    }
+    const s = b.startInsert(8, 'liked');
+    expect([s.lo, s.hi]).toEqual([0, 7]);
+    const s2 = b.answer(s.id, 'new');
+    expect([s2.lo, s2.hi]).toEqual([0, 3]);
+  });
+});

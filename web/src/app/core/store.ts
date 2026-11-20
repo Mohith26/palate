@@ -1,4 +1,5 @@
 import { Injectable, computed, signal } from '@angular/core';
+import { tidyName } from './meta';
 import { Band, BAND_ORDER, Choice, InsertState, maxComparisons, recommend, ScoreMap, scoreLists, similarity } from './engine';
 
 export interface Place { id: number; name: string; cuisine: string; zipcode?: string }
@@ -12,9 +13,14 @@ export interface Session {
   band_size: number;
   max_comparisons: number;
   compare_with: Place | null;
+  /** Current search window [lo, hi) inside the band (demo backend only; the API omits it). */
+  lo?: number;
+  hi?: number;
 }
 export interface FriendTaste { handle: string; similarity: number; overlap: number }
-export interface Rec { place: Place; predicted_score: number; support: number }
+export interface Rec { place: Place; predicted_score: number; support: number; friends?: string[] }
+export type Tab = 'rank' | 'list' | 'friends' | 'experiments' | 'results';
+export interface Step { vs: Place; choice: Choice; lo: number; hi: number }
 
 /** Mulberry32: tiny seeded PRNG so the demo friends are the same on every load. */
 export function seeded(seed: number): () => number {
@@ -82,7 +88,20 @@ export class LocalBackend {
       id, place: s.place, band: s.band, status: s.status, comparisons: s.state.comparisons,
       band_size: s.state.n, max_comparisons: maxComparisons(s.state.n),
       compare_with: s.status === 'open' && idx !== null ? this.place(this.lists[s.band][idx]) : null,
+      lo: s.state.lo, hi: s.state.hi,
     };
+  }
+
+  exportLists(): Record<Band, number[]> {
+    return { liked: [...this.lists.liked], fine: [...this.lists.fine], disliked: [...this.lists.disliked] };
+  }
+
+  importLists(lists: Partial<Record<Band, number[]>>) {
+    const known = new Set(this.places.map((p) => p.id));
+    const seen = new Set<number>();
+    for (const b of BAND_ORDER) {
+      this.lists[b] = (lists[b] ?? []).filter((id) => known.has(id) && !seen.has(id) && seen.add(id));
+    }
   }
 
   startInsert(placeId: number, band: Band): Session {
@@ -124,8 +143,11 @@ export class LocalBackend {
   }
 
   recommendations(k = 10): Rec[] {
-    return recommend(this.scoreMap(), this.friends.map((f) => f.scores), k).map((r) => ({
+    const mine = this.scoreMap();
+    const fans = this.friends.filter((f) => similarity(mine, f.scores).sim > 0);
+    return recommend(mine, this.friends.map((f) => f.scores), k).map((r) => ({
       place: this.place(r.placeId), predicted_score: Math.round(r.predicted * 100) / 100, support: r.support,
+      friends: fans.filter((f) => f.scores.has(r.placeId)).map((f) => f.handle),
     }));
   }
 }
@@ -163,9 +185,21 @@ export class Store {
   readonly recs = signal<Rec[]>([]);
   readonly error = signal<string | null>(null);
   readonly mode = signal<'demo' | 'api'>('demo');
+  readonly tab = signal<Tab>('rank');
+  readonly query = signal('');
+  /** Answers given in the current insertion, with the window they were asked in (drives the live panel). */
+  readonly trail = signal<Step[]>([]);
+  readonly loading = signal(true);
   readonly count = computed(() => this.entries().length);
+  readonly bandCounts = computed(() => {
+    const c: Record<Band, number> = { liked: 0, fine: 0, disliked: 0 };
+    for (const e of this.entries()) c[e.band]++;
+    return c;
+  });
   private local?: LocalBackend;
   private http?: HttpBackend;
+  private persist = false;
+  private static readonly KEY = 'palate.lists.v1';
 
   private ready = false;
 
@@ -177,11 +211,22 @@ export class Store {
       this.http = await HttpBackend.connect(api, 'me');
       this.mode.set('api');
     } else {
-      const ps = places ?? (await (await fetch('places.json')).json());
+      const ps: Place[] = places ?? ((await (await fetch('places.json')).json()) as Place[]).map((p) => ({ ...p, name: tidyName(p.name) }));
       this.local = new LocalBackend(ps);
+      // Only the real demo persists to localStorage; tests pass their own places and start clean.
+      this.persist = !places && typeof localStorage !== 'undefined';
+      if (this.persist) {
+        try {
+          const saved = localStorage.getItem(Store.KEY);
+          if (saved) this.local.importLists(JSON.parse(saved));
+        } catch {
+          /* ignore corrupt storage */
+        }
+      }
     }
     await this.refresh();
     await this.search('');
+    this.loading.set(false);
   }
 
   private async run<T>(fn: () => T | Promise<T>): Promise<T | undefined> {
@@ -194,12 +239,23 @@ export class Store {
     }
   }
 
+  private save() {
+    if (this.persist && this.local) {
+      try {
+        localStorage.setItem(Store.KEY, JSON.stringify(this.local.exportLists()));
+      } catch {
+        /* storage full or blocked */
+      }
+    }
+  }
+
   async refresh() {
     await this.run(async () => {
       if (this.local) {
         this.entries.set(this.local.list());
         this.taste.set(this.local.taste());
         this.recs.set(this.local.recommendations());
+        this.save();
       } else if (this.http) {
         this.entries.set(await this.http.list());
         this.taste.set(await this.http.taste());
@@ -209,10 +265,12 @@ export class Store {
   }
 
   async search(q: string) {
+    this.query.set(q);
     await this.run(async () => this.results.set(this.local ? this.local.search(q) : await this.http!.search(q)));
   }
 
   async start(place: Place, band: Band) {
+    this.trail.set([]);
     const s = await this.run(() => (this.local ? this.local.startInsert(place.id, band) : this.http!.startInsert(place.id, band)));
     if (s) this.session.set(s);
     if (s?.status === 'done') {
@@ -223,7 +281,11 @@ export class Store {
 
   async answer(choice: Choice) {
     const cur = this.session();
-    if (!cur) return;
+    if (!cur || cur.status !== 'open') return;
+    if (cur.compare_with) {
+      const lo = cur.lo ?? 0, hi = cur.hi ?? cur.band_size;
+      this.trail.update((t) => [...t, { vs: cur.compare_with!, choice, lo, hi }]);
+    }
     const s = await this.run(() => (this.local ? this.local.answer(cur.id, choice) : this.http!.answer(cur.id, choice)));
     if (s) this.session.set(s);
     if (s?.status === 'done') {
@@ -235,9 +297,57 @@ export class Store {
   async remove(placeId: number) {
     await this.run(() => (this.local ? this.local.remove(placeId) : this.http!.remove(placeId)));
     await this.refresh();
+    await this.search(this.query());
   }
 
   closeSession() {
     this.session.set(null);
+    this.trail.set([]);
+  }
+
+  /** Where the place from the finished session landed in the full list (1-based), if known. */
+  placedRank(placeId: number): number | null {
+    const i = this.entries().findIndex((e) => e.place.id === placeId);
+    return i < 0 ? null : i + 1;
+  }
+
+  get canSeed(): boolean {
+    return !!this.local;
+  }
+
+  /**
+   * Demo shortcut: a simulated diner whose taste loosely follows one seeded friend ranks `n` places
+   * through the exact same insert/answer contract a human uses, so the list, taste match and
+   * recommendations all fill in. Answers come from a hidden utility plus noise.
+   */
+  async seedSample(n = 12) {
+    const b = this.local;
+    if (!b) return;
+    this.closeSession();
+    const rnd = seeded(Date.now() % 100000);
+    const friend = b.friends[Math.floor(rnd() * b.friends.length)];
+    const ranked = new Set(b.list().map((e) => e.place.id));
+    const pool = [...friend.scores.keys()].filter((id) => !ranked.has(id)).sort(() => rnd() - 0.5).slice(0, n);
+    const util = new Map(pool.map((id) => [id, friend.scores.get(id)! + (rnd() - 0.5) * 2.5]));
+    for (const id of pool) {
+      const u = util.get(id)!;
+      const band: Band = u >= 6.7 ? 'liked' : u >= 3.4 ? 'fine' : 'disliked';
+      let s = b.startInsert(id, band);
+      while (s.status === 'open' && s.compare_with) {
+        const v = util.get(s.compare_with.id) ?? 5;
+        s = b.answer(s.id, Math.abs(u - v) < 0.15 ? 'tie' : u > v ? 'new' : 'existing');
+      }
+    }
+    await this.refresh();
+    await this.search(this.query());
+    return friend.handle;
+  }
+
+  async clearAll() {
+    if (!this.local) return;
+    this.closeSession();
+    this.local.importLists({});
+    await this.refresh();
+    await this.search(this.query());
   }
 }

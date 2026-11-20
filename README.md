@@ -6,6 +6,12 @@ It is a Django + PostgreSQL REST backend, an Angular frontend, and a small exper
 
 **Live demo (runs fully in the browser, no backend):** https://mohith26.github.io/palate/
 
+![Ranking a restaurant: the head-to-head question on the left, the live binary-insertion window on the right](docs/rank.png)
+
+The demo shows the algorithm while you use it: the "Under the hood" panel highlights the place you're being compared against and dims everything outside the current search window, so you can watch each answer halve it. Keyboard works too (left/right to pick, down for "too close to call"). The Experiments tab re-runs the peeking study live in your browser (200 A/A tests in about two seconds), and the Results tab charts every number below straight from `results/results.json`.
+
+![Experiments tab: p-value paths for one test, and false-positive rates over 200 simulated A/A tests](docs/experiments.png)
+
 ## What it does
 
 * **Head-to-head ranking.** You pick a sentiment band first (liked it / it was fine / didn't like it), then the app runs a binary insertion inside that band: each question halves the remaining range, so a new place lands in at most ceil(log2(n+1)) questions. A "too close to call" answer places it next to the item you were just shown and ends the flow early.
@@ -23,7 +29,8 @@ server/            Django project (palate), apps: ranking, experiments
   ranking/taste.py       Kendall tau similarity + recommendations
   experiments/stats.py   Welch z-test, CUPED, mSPRT always-valid p-values / confidence sequence
   tests/                 pytest suite (runs against PostgreSQL)
-web/               Angular app (standalone components + signals); TS mirror of engine and stats
+web/               Angular app (standalone components + signals); TS mirror of engine and stats,
+                   live algorithm panel, in-browser Monte Carlo, results charts
 sim/               noisy-user simulator, metrics script, HTTP load test
 data/              NYC DOHMH Manhattan restaurant catalog (CSV)
 results/           results.json written by sim/run_metrics.py
@@ -41,11 +48,11 @@ cd server
 ../.venv/bin/python manage.py runserver 8000
 
 cd ../web && npm install
-npx ng test --watch=false                 # 19 tests (vitest + jsdom)
+npx ng test --watch=false                 # 22 tests (vitest + jsdom)
 npx ng serve                              # http://localhost:4200/?api=http://localhost:8000/api
 ```
 
-Without `?api=` the Angular app runs in demo mode on an in-browser backend (same insertion contract, three seeded simulated friends).
+Without `?api=` the Angular app runs in demo mode on an in-browser backend (same insertion contract, three seeded simulated friends). Your demo list is saved in localStorage, and "Load sample list" ranks 12 places with a simulated diner through the same insert/answer calls so the taste-match and recommendation views fill in right away.
 
 Reproduce every number below (about a minute on a laptop; the latency section starts gunicorn against Postgres):
 
